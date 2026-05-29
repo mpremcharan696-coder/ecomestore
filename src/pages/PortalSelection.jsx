@@ -73,7 +73,11 @@ export default function PortalSelection() {
         repeat: 1,
         ease: 'power2.inOut',
         onComplete: () => {
-          alert(`Initializing secure quantum link to ${portalName}...`)
+          if (portalName === 'Vendor Portal') {
+            navigate('/vendor-auth')
+          } else {
+            alert(`Initializing secure quantum link to ${portalName}...`)
+          }
           setActivePortal(null)
         }
       }

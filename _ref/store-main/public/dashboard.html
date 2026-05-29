@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Dashboard | OmniStore</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --accent: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            position: fixed;
+            height: 100vh;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .nav-item {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { background: rgba(255,255,255,0.05); }
+
+        /* Form Container */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        input, textarea, select {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus { border-color: var(--primary); }
+
+        /* Specs Table */
+        .specs-container {
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .spec-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .remove-spec {
+            color: #ef4444;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        /* Success/Error States */
+        #statusMessage {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            display: none;
+        }
+        .success { background: rgba(16, 185, 129, 0.1); color: var(--accent); border: 1px solid var(--accent); }
+        .error { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid #ef4444; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 2.5rem;
+            position: relative;
+        }
+        .close-modal {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        .insight-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .insight-card {
+            background: var(--bg);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        .insight-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: block;
+        }
+        .insight-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 1024px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Product Insight Modal -->
+    <div id="productInsightModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeInsightModal()">✕</span>
+            <div id="modalContent">
+                <!-- Content injected here -->
+            </div>
+        </div>
+    </div>
+    <div class="sidebar">
+        <div class="logo">OmniStore</div>
+        <nav class="nav-links" id="sidebarNav">
+            <a href="#" class="nav-item active" data-tab="overview">📊 Overview</a>
+            <a href="#" class="nav-item" data-tab="products">📦 Products</a>
+            <a href="#" class="nav-item" data-tab="ai">🤖 AI Assistant</a>
+            <a href="#" class="nav-item" data-tab="settings">⚙️ Settings</a>
+        </nav>
+        <div style="margin-top: auto;">
+            <button onclick="logout()" class="nav-item" style="width: 100%; border: none; background: none;">🚪 Logout</button>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <!-- Overview / Analytics Section -->
+        <section id="overview-section" class="tab-content">
+            <header>
+                <h1>Dashboard Overview</h1>
+                <div style="display: flex; gap: 1rem;">
+                    <select id="graphRange" class="btn btn-outline" onchange="fetchAnalyticsGraph(this.value)">
+                        <option value="30days">Last 30 Days</option>
+                        <option value="3months">Last 3 Months</option>
+                        <option value="6months">Last 6 Months</option>
+                        <option value="12months">Last 12 Months</option>
+                    </select>
+                </div>
+            </header>
+
+            <div class="card" style="margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h2>Sales Performance</h2>
+                        <select id="graphProductFilter" style="margin-top: 0.5rem; font-size: 0.8rem; padding: 0.3rem 0.6rem;" onchange="fetchAnalyticsGraph()">
+                            <option value="">All Products</option>
+                            <!-- Products injected here -->
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <button id="editSalesBtn" class="btn btn-outline" style="display: none; font-size: 0.8rem; padding: 0.4rem 0.8rem;" onclick="openSalesEditor()">✏️ Edit Sales Data</button>
+                        <div style="display: flex; gap: 1rem; font-size: 0.8rem;">
+                            <span style="color: #6366f1;">● Revenue (₹)</span>
+                            <span style="color: #ec4899;">● Orders</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="height: 350px; position: relative;">
+                    <canvas id="vendorSalesChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sales Editor Modal -->
+        <div id="salesEditorModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="closeSalesEditor()">✕</span>
+                <h2>Manual Sales Editor</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Enter custom data for specific dates to override real stats.</p>
+                
+                <form id="salesEditorForm" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <div class="form-group">
+                        <label>Target Product</label>
+                        <select id="salesProductId" required onchange="updateAvgPriceForEditor()">
+                            <option value="">Select a product...</option>
+                            <!-- Products injected here -->
+                        </select>
+                    </div>
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" id="salesDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Orders Count</label>
+                            <input type="number" id="salesOrders" placeholder="0" required oninput="syncRevenueFromSales()">
+                        </div>
+                        <div class="form-group">
+                            <label>Revenue (₹)</label>
+                            <input type="number" id="salesRevenue" placeholder="0.00" required oninput="syncSalesFromRevenue()">
+                        </div>
+                    </div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: -1rem;">* Calculations based on your store's average product price.</p>
+                    <button type="submit" class="btn btn-primary">Update Statistics</button>
+                </form>
+
+                <div style="margin-top: 2rem;">
+                    <h3>Recent Manual Entries</h3>
+                    <div id="manualEntriesList" style="margin-top: 1rem; max-height: 200px; overflow-y: auto;">
+                        <!-- List injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Section -->
+        <section id="products-section" class="tab-content" style="display: none;">
+            <header>
+                <h1>Product Management</h1>
+                <button class="btn btn-primary" onclick="openProductForm()">+ Add New Product</button>
+            </header>
+
+            <div class="card" id="productListSection" style="margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2>My Products</h2>
+                    <div id="productStats" style="color: var(--text-muted); font-size: 0.9rem;"></div>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                                <th style="padding: 1rem;">Image</th>
+                                <th style="padding: 1rem;">Product</th>
+                                <th style="padding: 1rem;">Category</th>
+                                <th style="padding: 1rem;">Price</th>
+                                <th style="padding: 1rem;">Stock</th>
+                                <th style="padding: 1rem;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productTableBody">
+                            <!-- Products will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Assistant Section -->
+        <section id="ai-section" class="tab-content" style="display: none;">
+            <header><h1>Business Strategist AI</h1></header>
+            <div class="card" style="height: 600px; display: flex; flex-direction: column; padding: 0;">
+                <div id="aiChatMessages" style="flex: 1; padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="background: rgba(99, 102, 241, 0.1); color: var(--primary); padding: 1rem; border-radius: 1rem; align-self: flex-start; max-width: 80%;">
+                        Hello! I'm your OmniStore Business Strategist. How can I help you grow your store today?
+                    </div>
+                </div>
+                <div style="padding: 1.5rem; border-top: 1px solid var(--border); display: flex; gap: 1rem;">
+                    <input type="text" id="aiChatInput" placeholder="Ask about store optimization, sales tips, or new features..." style="flex: 1;">
+                    <button id="sendAiBtn" class="btn btn-primary">Send</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="settings-section" class="tab-content" style="display: none;">
+            <header><h1>Store Settings</h1></header>
+            <div class="card">
+                <form id="settingsForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Store Name</label>
+                            <input type="text" name="store_name" placeholder="My Awesome Store">
+                        </div>
+                        <div class="form-group">
+                            <label>Tagline</label>
+                            <input type="text" name="tagline" placeholder="Quality you can trust">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea name="description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="sales_edit_enabled" style="width: auto;">
+                            Enable Manual Sales Management (Override real order data with custom stats)
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                </form>
+            </div>
+            <!-- Product Form Card -->
+            <div class="card" id="productFormCard" style="display: none; margin-bottom: 2rem;">
+                <h2 style="margin-bottom: 1.5rem;">Create New Product</h2>
+                <form id="productForm">
+                <!-- ... existing form content ... -->
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Product Name</label>
+                        <input type="text" name="name" placeholder="e.g. Premium Leather Sneakers" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select name="category">
+                            <option value="Electronics">Electronics</option>
+                            <option value="Fashion">Fashion</option>
+                            <option value="Home">Home</option>
+                            <option value="Fitness">Fitness</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" rows="4" placeholder="Describe your product..."></textarea>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Stock Quantity</label>
+                        <input type="number" name="stock" placeholder="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Cost Price (₹)</label>
+                        <input type="number" id="costPriceInput" name="cost_price" step="0.01" placeholder="Your cost" required oninput="calculatePriceFromMargin()">
+                    </div>
+                </div>
+
+                <div class="card" style="background: rgba(255,255,255,0.02); padding: 1.5rem; margin-bottom: 1.5rem; border: 1px dashed var(--border);">
+                    <h3>Profit Calculator</h3>
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr; align-items: end; margin-top: 1rem;">
+                        <div class="form-group">
+                            <label>Margin Type</label>
+                            <select id="marginType" onchange="calculatePriceFromMargin()">
+                                <option value="percent">Percentage (%)</option>
+                                <option value="amount">Amount (₹)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Margin Value</label>
+                            <input type="number" id="marginInput" step="0.01" placeholder="0" oninput="calculatePriceFromMargin()">
+                        </div>
+                        <div class="form-group">
+                            <div style="background: var(--bg); padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border);">
+                                <span style="font-size: 0.7rem; color: var(--text-muted); display: block;">Calculated Profit</span>
+                                <span id="calculatedProfit" style="font-weight: 700; color: #10b981;">₹0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Final Selling Price (₹)</label>
+                        <input type="number" id="finalPriceInput" name="price" step="0.01" placeholder="0.00" required oninput="calculateMarginFromPrice()">
+                    </div>
+                    <div class="form-group">
+                        <label>Compare at Price (₹)</label>
+                        <input type="number" name="compare_price" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Product Photos (Max 5)</label>
+                        <input type="file" id="productPhotos" name="photos" multiple accept="image/*">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Technical Specifications</label>
+                    <div class="specs-container" id="specsList">
+                        <!-- Spec rows will be added here -->
+                    </div>
+                    <button type="button" class="btn btn-outline" style="margin-top: 0.5rem;" onclick="addSpecRow()">+ Add Specification</button>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn btn-primary">Save Product</button>
+                    <button type="button" class="btn btn-outline" onclick="closeProductForm()">Cancel</button>
+                </div>
+            </form>
+            <div id="statusMessage"></div>
+        </div>
+        </section>
+    </main>
+
+    <script>
+        // Check Auth on Load
+        const token = localStorage.getItem('omnistore_token');
+        if (!token) window.location.href = '/login';
+
+        // --- TAB NAVIGATION ENGINE ---
+        const navItems = document.querySelectorAll('.nav-item[data-tab]');
+        const sections = document.querySelectorAll('.tab-content');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetTab = item.getAttribute('data-tab');
+
+                // 1. Update Navigation UI
+                navItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                // 2. Switch Content Panels
+                sections.forEach(section => {
+                    section.style.display = section.id === `${targetTab}-section` ? 'block' : 'none';
+                });
+
+                // 3. Trigger Data Fetching
+                if (targetTab === 'overview') fetchAnalyticsGraph();
+                if (targetTab === 'products') fetchProducts();
+                if (targetTab === 'settings') fetchVendorProfile();
+            });
+        });
+
+        // --- VENDOR AI ASSISTANT ENGINE ---
+        async function sendVendorAiMessage() {
+            const input = document.getElementById('aiChatInput');
+            const btn = document.getElementById('sendAiBtn');
+            const container = document.getElementById('aiChatMessages');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // Render User Message
+            const userDiv = document.createElement('div');
+            userDiv.style = "background: var(--bg); border: 1px solid var(--border); padding: 1rem; border-radius: 1rem; align-self: flex-end; max-width: 80%;";
+            userDiv.textContent = message;
+            container.appendChild(userDiv);
+            input.value = '';
+            userDiv.scrollIntoView({ behavior: 'smooth' });
+
+            btn.disabled = true;
+            btn.textContent = '...';
+
+            try {
+                const response = await fetch('/api/vendor/ai-chat', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ message })
+                });
+                const data = await response.json();
+
+                // Render AI Response
+                const aiDiv = document.createElement('div');
+                aiDiv.style = "background: rgba(99, 102, 241, 0.1); color: var(--primary); padding: 1rem; border-radius: 1rem; align-self: flex-start; max-width: 80%;";
+                aiDiv.textContent = data.reply || 'Sorry, I encountered an error.';
+                container.appendChild(aiDiv);
+                aiDiv.scrollIntoView({ behavior: 'smooth' });
+            } catch (err) {
+                console.error('AI Chat Error:', err);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Send';
+            }
+        }
+
+        document.getElementById('sendAiBtn').addEventListener('click', sendVendorAiMessage);
+        document.getElementById('aiChatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendVendorAiMessage();
+        });
+
+        // --- PROFIT CALCULATOR ENGINE ---
+        function calculatePriceFromMargin() {
+            const cost = parseFloat(document.getElementById('costPriceInput').value) || 0;
+            const marginValue = parseFloat(document.getElementById('marginInput').value) || 0;
+            const type = document.getElementById('marginType').value;
+            const profitSpan = document.getElementById('calculatedProfit');
+            const priceInput = document.getElementById('finalPriceInput');
+
+            let profit = 0;
+            let price = 0;
+
+            if (type === 'percent') {
+                profit = (cost * marginValue) / 100;
+                price = cost + profit;
+            } else {
+                profit = marginValue;
+                price = cost + profit;
+            }
+
+            priceInput.value = price.toFixed(2);
+            profitSpan.textContent = `₹${profit.toFixed(2)}`;
+        }
+
+        function calculateMarginFromPrice() {
+            const cost = parseFloat(document.getElementById('costPriceInput').value) || 0;
+            const price = parseFloat(document.getElementById('finalPriceInput').value) || 0;
+            const type = document.getElementById('marginType').value;
+            const profitSpan = document.getElementById('calculatedProfit');
+            const marginInput = document.getElementById('marginInput');
+
+            const profit = price - cost;
+            let margin = 0;
+
+            if (type === 'percent') {
+                margin = cost > 0 ? (profit / cost) * 100 : 0;
+            } else {
+                margin = profit;
+            }
+
+            marginInput.value = margin.toFixed(2);
+            profitSpan.textContent = `₹${profit.toFixed(2)}`;
+        }
+
+        let salesChart = null;
+
+        // --- ANALYTICAL VISUALIZATION ENGINE ---
+        async function fetchAnalyticsGraph(range = '30days') {
+            const productId = document.getElementById('graphProductFilter')?.value || '';
+            try {
+                const response = await fetch(`/api/vendor/analytics/graph?range=${range}${productId ? `&product_id=${productId}` : ''}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                // 5. If salesChart already exists, invoke destroy()
+                if (salesChart) salesChart.destroy();
+
+                const ctx = document.getElementById('vendorSalesChart').getContext('2d');
+                salesChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [
+                            {
+                                label: 'Revenue (₹)',
+                                data: data.revenueData,
+                                borderColor: '#6366f1',
+                                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                                fill: true,
+                                tension: 0.4,
+                                yAxisID: 'y-axis-revenue'
+                            },
+                            {
+                                label: 'Orders',
+                                data: data.ordersData,
+                                borderColor: '#ec4899',
+                                backgroundColor: 'transparent',
+                                borderDash: [5, 5],
+                                tension: 0.1,
+                                yAxisID: 'y-axis-orders'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            'y-axis-revenue': {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { 
+                                    color: '#94a3b8',
+                                    callback: (value) => '₹' + value.toLocaleString()
+                                }
+                            },
+                            'y-axis-orders': {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                grid: { drawOnChartArea: false },
+                                ticks: { color: '#94a3b8', stepSize: 1 }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8' }
+                            }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error('Chart Load Error:', err);
+            }
+        }
+
+        // --- PRODUCT MANAGEMENT ENGINE ---
+        let averageProductPrice = 1000; // Default fallback
+        let globalProducts = [];
+
+        async function fetchProducts() {
+            try {
+                const response = await fetch('/api/products', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const products = await response.json();
+                globalProducts = products;
+                renderProductTable(products);
+
+                // Populate Graph Filter
+                const graphFilter = document.getElementById('graphProductFilter');
+                if (graphFilter) {
+                    const currentFilter = graphFilter.value;
+                    graphFilter.innerHTML = '<option value="">All Products</option>' + 
+                        products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+                    graphFilter.value = currentFilter;
+                }
+
+                // Calculate Average Price for Global Stats fallback
+                if (products.length > 0) {
+                    const total = products.reduce((acc, p) => acc + parseFloat(p.price), 0);
+                    averageProductPrice = total / products.length;
+                }
+            } catch (err) {
+                console.error('Fetch products error:', err);
+            }
+        }
+
+        function renderProductTable(products) {
+            const tableBody = document.getElementById('productTableBody');
+            const stats = document.getElementById('productStats');
+            
+            stats.textContent = `Showing ${products.length} products`;
+            
+            tableBody.innerHTML = products.map(p => `
+                <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="showProductDetails(${p.id})">
+                    <td style="padding: 1rem;">
+                        <img src="${p.image_url || 'https://via.placeholder.com/50'}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 0.5rem;">
+                    </td>
+                    <td style="padding: 1rem;">
+                        <div style="font-weight: 600;">${p.name}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.description}</div>
+                    </td>
+                    <td style="padding: 1rem;">
+                        <span style="background: rgba(255,255,255,0.05); padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.8rem;">${p.category}</span>
+                    </td>
+                    <td style="padding: 1rem; font-weight: 600; color: var(--primary);">₹${p.price}</td>
+                    <td style="padding: 1rem;">
+                        <span style="color: ${p.stock < 10 ? '#ef4444' : 'inherit'}">${p.stock}</span>
+                    </td>
+                    <td style="padding: 1rem;" onclick="event.stopPropagation()">
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button onclick="deleteProduct(${p.id})" style="background: none; border: none; color: #ef4444; cursor: pointer;">🗑️</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function showProductDetails(id) {
+            const modal = document.getElementById('productInsightModal');
+            const content = document.getElementById('modalContent');
+            modal.style.display = 'flex';
+            content.innerHTML = '<div style="text-align: center; padding: 2rem;">Loading insights...</div>';
+
+            try {
+                const res = await fetch(`/api/products/${id}/insights`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                const { product, insights } = data;
+
+                content.innerHTML = `
+                    <div style="display: flex; gap: 2rem; align-items: start; margin-bottom: 2rem;">
+                        <img src="${product.image_url}" style="width: 150px; height: 150px; object-fit: cover; border-radius: 1rem; border: 1px solid var(--border);">
+                        <div>
+                            <h2 style="font-size: 2rem; margin-bottom: 0.5rem;">${product.name}</h2>
+                            <p style="color: var(--text-muted); margin-bottom: 1rem;">${product.category} | Created ${new Date(product.created_at).toLocaleDateString()}</p>
+                            <div style="display: flex; gap: 1rem;">
+                                <span class="success" style="padding: 0.2rem 0.6rem; border-radius: 2rem; font-size: 0.8rem;">Active</span>
+                                <span style="color: var(--secondary); font-weight: 700;">⭐ ${insights.avgRating} (${insights.reviewCount} Reviews)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="insight-grid">
+                        <div class="insight-card">
+                            <span class="insight-value">${insights.totalSales}</span>
+                            <span class="insight-label">Total Sold</span>
+                        </div>
+                        <div class="insight-card">
+                            <span class="insight-value">₹${insights.totalRevenue.toLocaleString()}</span>
+                            <span class="insight-label">Revenue</span>
+                        </div>
+                        <div class="insight-card">
+                            <span class="insight-value" style="color: #10b981;">₹${insights.totalProfit.toLocaleString()}</span>
+                            <span class="insight-label">Est. Profit</span>
+                        </div>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 2rem;">
+                        <div class="card" style="padding: 1.5rem;">
+                            <h3>Update Inventory</h3>
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label>Current Stock</label>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <input type="number" id="updateStockInput" value="${product.stock}" style="flex: 1;">
+                                    <button class="btn btn-primary" onclick="updateStock(${product.id})">Update</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card" style="padding: 1.5rem;">
+                            <h3>Manage Discount</h3>
+                            <div class="form-grid" style="grid-template-columns: 1fr 1fr; margin-top: 1rem; gap: 0.5rem;">
+                                <div class="form-group">
+                                    <label>Sale Price (₹)</label>
+                                    <input type="number" id="updatePriceInput" value="${product.price}">
+                                </div>
+                                <div class="form-group">
+                                    <label>MRP (₹)</label>
+                                    <input type="number" id="updateCompareInput" value="${product.compare_price}">
+                                </div>
+                            </div>
+                            <button class="btn btn-outline" style="width: 100%; margin-top: 0.5rem;" onclick="updateDiscount(${product.id})">Apply Discount</button>
+                        </div>
+                    </div>
+
+                    <div class="card" style="padding: 1.5rem; margin-bottom: 2rem;">
+                        <h3>Active Promo Codes</h3>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem; margin-bottom: 1.5rem;">
+                            <input type="text" id="newPromoCode" placeholder="CODE (e.g. SAVE20)" style="flex: 2;">
+                            <input type="number" id="newPromoDiscount" placeholder="%" style="flex: 1;">
+                            <button class="btn btn-primary" onclick="addPromoCode(${product.id})">Add</button>
+                        </div>
+                        <div id="promoCodesList" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            ${insights.promoCodes.map(c => `
+                                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; padding: 0.4rem 0.8rem; border-radius: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="font-weight: 700; color: #10b981;">${c.code} (${c.discount_percent}%)</span>
+                                    <button onclick="deletePromoCode(${c.id}, ${product.id})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.8rem;">✕</button>
+                                </div>
+                            `).join('')}
+                            ${insights.promoCodes.length === 0 ? '<p style="color: var(--text-muted); font-size: 0.9rem;">No active promo codes.</p>' : ''}
+                        </div>
+                    </div>
+
+                    <h3>Customer Feedback</h3>
+                    <div style="margin-top: 1rem; max-height: 200px; overflow-y: auto;">
+                        ${insights.reviews.length > 0 ? insights.reviews.map(r => `
+                            <div style="padding: 1rem; border-bottom: 1px solid var(--border);">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.2rem;">
+                                    <span style="font-weight: 600;">${r.customer_name}</span>
+                                    <span style="color: var(--secondary); font-size: 0.8rem;">${'⭐'.repeat(r.rating)}</span>
+                                </div>
+                                <p style="font-size: 0.9rem; color: var(--text-muted);">${r.comment}</p>
+                            </div>
+                        `).join('') : '<p style="color: var(--text-muted);">No reviews yet for this product.</p>'}
+                    </div>
+                `;
+            } catch (err) {
+                content.innerHTML = '<div style="color: #ef4444; padding: 2rem;">Error: ' + err.message + '</div>';
+            }
+        }
+
+        function closeInsightModal() {
+            document.getElementById('productInsightModal').style.display = 'none';
+        }
+
+        async function updateStock(id) {
+            const stock = document.getElementById('updateStockInput').value;
+            try {
+                const res = await fetch(`/api/products/${id}/stock`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ stock: parseInt(stock) })
+                });
+                if (res.ok) {
+                    alert('Stock updated!');
+                    fetchProducts();
+                }
+            } catch (err) { alert('Failed to update stock'); }
+        }
+
+        async function updateDiscount(id) {
+            const price = document.getElementById('updatePriceInput').value;
+            const compare_price = document.getElementById('updateCompareInput').value;
+            try {
+                const res = await fetch(`/api/products/${id}/discount`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ price: parseFloat(price), compare_price: parseFloat(compare_price) })
+                });
+                if (res.ok) {
+                    alert('Price/Discount updated!');
+                    showProductDetails(id); // Refresh modal
+                    fetchProducts();
+                }
+            } catch (err) { alert('Failed to update price'); }
+        }
+
+        async function addPromoCode(productId) {
+            const code = document.getElementById('newPromoCode').value;
+            const discount_percent = document.getElementById('newPromoDiscount').value;
+            if (!code || !discount_percent) return alert('Please enter code and percentage');
+
+            try {
+                const res = await fetch(`/api/products/${productId}/promo`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ code, discount_percent: parseInt(discount_percent) })
+                });
+                if (res.ok) {
+                    showProductDetails(productId); // Refresh modal
+                } else {
+                    const data = await res.json();
+                    alert(data.error);
+                }
+            } catch (err) { alert('Failed to add promo code'); }
+        }
+
+        async function deletePromoCode(promoId, productId) {
+            try {
+                const res = await fetch(`/api/promo/${promoId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    showProductDetails(productId); // Refresh modal
+                }
+            } catch (err) { alert('Failed to delete promo code'); }
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('Are you sure you want to delete this product?')) return;
+            try {
+                const response = await fetch(`/api/products/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    fetchProducts();
+                }
+            } catch (err) {
+                alert('Delete failed: ' + err.message);
+            }
+        }
+
+        // UI Helpers
+        function openProductForm() { document.getElementById('productFormCard').style.display = 'block'; }
+        function closeProductForm() { document.getElementById('productFormCard').style.display = 'none'; }
+
+        // Initial Load
+        fetchAnalyticsGraph();
+        fetchProducts();
+
+        // Add dynamic spec rows
+        function addSpecRow() {
+            const container = document.getElementById('specsList');
+            const row = document.createElement('div');
+            row.className = 'spec-row';
+            row.innerHTML = `
+                <input type="text" placeholder="Key (e.g. Material)" class="spec-key">
+                <input type="text" placeholder="Value (e.g. Leather)" class="spec-value">
+                <button type="button" class="remove-spec" onclick="this.parentElement.remove()">✕</button>
+            `;
+            container.appendChild(row);
+        }
+
+        // --- SETTINGS & PROFILE ENGINE ---
+        async function fetchVendorProfile() {
+            try {
+                const response = await fetch('/api/vendor/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const vendor = await response.json();
+                const form = document.getElementById('settingsForm');
+                form.store_name.value = vendor.store_name || '';
+                form.tagline.value = vendor.tagline || '';
+                form.description.value = vendor.description || '';
+                form.sales_edit_enabled.checked = vendor.sales_edit_enabled || false;
+
+                // Sync Visibility of Edit Button
+                document.getElementById('editSalesBtn').style.display = vendor.sales_edit_enabled ? 'block' : 'none';
+            } catch (err) {
+                console.error('Profile fetch error:', err);
+            }
+        }
+
+        document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const data = {
+                store_name: form.store_name.value,
+                tagline: form.tagline.value,
+                description: form.description.value,
+                sales_edit_enabled: form.sales_edit_enabled.checked
+            };
+            try {
+                const response = await fetch('/api/vendor/profile', {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    alert('✅ Settings saved successfully!');
+                    fetchVendorProfile();
+                    fetchAnalyticsGraph(); 
+                } else {
+                    const errData = await response.json();
+                    alert('❌ Save Failed: ' + (errData.error || 'Server Error'));
+                }
+            } catch (err) {
+                alert('❌ Connection Error: ' + err.message);
+            }
+        });
+
+        // --- MANUAL SALES EDITOR ENGINE ---
+        function openSalesEditor() {
+            document.getElementById('salesEditorModal').style.display = 'flex';
+            
+            // Populate Product Selector
+            const selector = document.getElementById('salesProductId');
+            const currentSelection = selector.value;
+            selector.innerHTML = '<option value="">Select a product...</option>' + 
+                globalProducts.map(p => `<option value="${p.id}">${p.name} (₹${p.price})</option>`).join('');
+            selector.value = currentSelection;
+
+            fetchManualEntries();
+        }
+
+        function updateAvgPriceForEditor() {
+            const productId = document.getElementById('salesProductId').value;
+            const product = globalProducts.find(p => p.id == productId);
+            if (product) {
+                averageProductPrice = parseFloat(product.price);
+            }
+            // Clear inputs to avoid confusion
+            document.getElementById('salesOrders').value = '';
+            document.getElementById('salesRevenue').value = '';
+        }
+
+        function closeSalesEditor() {
+            document.getElementById('salesEditorModal').style.display = 'none';
+        }
+
+        function syncRevenueFromSales() {
+            const orders = parseInt(document.getElementById('salesOrders').value) || 0;
+            const revenueInput = document.getElementById('salesRevenue');
+            revenueInput.value = (orders * averageProductPrice).toFixed(2);
+        }
+
+        function syncSalesFromRevenue() {
+            const revenue = parseFloat(document.getElementById('salesRevenue').value) || 0;
+            const ordersInput = document.getElementById('salesOrders');
+            if (averageProductPrice > 0) {
+                ordersInput.value = Math.round(revenue / averageProductPrice);
+            }
+        }
+
+        async function fetchManualEntries() {
+            const list = document.getElementById('manualEntriesList');
+            try {
+                const res = await fetch('/api/vendor/manual-analytics', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const entries = await res.json();
+                list.innerHTML = entries.map(e => {
+                    const product = globalProducts.find(p => p.id == e.product_id);
+                    return `
+                        <div style="padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 700;">${product ? product.name : 'Unknown Product'}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted);">${new Date(e.date).toLocaleDateString()}</div>
+                            </div>
+                            <span style="font-weight: 700;">${e.orders_count} Orders | ₹${parseFloat(e.revenue).toLocaleString()}</span>
+                        </div>
+                    `;
+                }).join('') || '<p style="color: var(--text-muted);">No manual entries found.</p>';
+            } catch (err) { console.error('Failed to fetch entries:', err); }
+        }
+
+        document.getElementById('salesEditorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                product_id: document.getElementById('salesProductId').value,
+                date: document.getElementById('salesDate').value,
+                orders_count: parseInt(document.getElementById('salesOrders').value),
+                revenue: parseFloat(document.getElementById('salesRevenue').value)
+            };
+
+            try {
+                const res = await fetch('/api/vendor/manual-analytics', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    alert('Statistics updated!');
+                    fetchManualEntries();
+                    fetchAnalyticsGraph(); // Refresh chart
+                }
+            } catch (err) { alert('Failed to save data'); }
+        });
+
+
+        // --- CORE FORM SUBMISSION LOGIC ---
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent propagation as requested
+            const form = e.target;
+            const statusDiv = document.getElementById('statusMessage');
+            
+            // 1. Instantiate FormData
+            const formData = new FormData();
+
+            // 2. Collect basic fields
+            formData.append('name', form.name.value);
+            formData.append('description', form.description.value);
+            formData.append('price', form.price.value);
+            formData.append('compare_price', form.compare_price.value || 0);
+            formData.append('stock', form.stock.value);
+            formData.append('cost_price', form.cost_price.value || 0);
+            formData.append('category', form.category.value);
+
+            // 3. Collect Photos
+            const photoInput = document.getElementById('productPhotos');
+            if (photoInput.files.length > 5) {
+                alert('Please select up to 5 photos only.');
+                return;
+            }
+            for (let i = 0; i < photoInput.files.length; i++) {
+                formData.append('photos', photoInput.files[i]);
+            }
+
+            // 4. Collect Technical Specifications (Dynamic Dictionary)
+            const specs = {};
+            const specRows = document.querySelectorAll('.spec-row');
+            specRows.forEach(row => {
+                const key = row.querySelector('.spec-key').value.trim();
+                const value = row.querySelector('.spec-value').value.trim();
+                if (key && value) specs[key] = value;
+            });
+            // Stringify specification block
+            formData.append('specs', JSON.stringify(specs));
+
+            try {
+                // 5. Execute native window.fetch() POST request
+                const response = await fetch('/api/vendor/products', {
+                    method: 'POST',
+                    headers: {
+                        // Pass active vendor authentication JWT token
+                        'Authorization': `Bearer ${token}`
+                        // Note: Content-Type is NOT set manually.
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusDiv.textContent = '✅ Product created successfully!';
+                    statusDiv.className = 'success';
+                    statusDiv.style.display = 'block';
+                    form.reset();
+                    document.getElementById('specsList').innerHTML = '';
+                    fetchProducts();
+                    setTimeout(closeProductForm, 2000);
+                } else {
+                    throw new Error(result.error || 'Failed to save product');
+                }
+            } catch (err) {
+                statusDiv.textContent = '❌ Error: ' + err.message;
+                statusDiv.className = 'error';
+                statusDiv.style.display = 'block';
+            }
+        });
+
+        function logout() {
+            localStorage.removeItem('omnistore_token');
+            window.location.href = '/login';
+        }
+    </script>
+</body>
+</html>
