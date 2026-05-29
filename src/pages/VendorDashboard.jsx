@@ -258,10 +258,11 @@ export default function VendorDashboard() {
     fetchDatabaseValues();
   }, [storeId]);
 
-  // Fetch P&L and chart data whenever storeId or salesDuration changes
+  // Fetch all dashboard data whenever storeId or salesDuration changes
+  // Also auto-refresh every 30s to pick up external ecom checkout updates
   useEffect(() => {
     if (!storeId) return;
-    const fetchPLAndChart = async () => {
+    const fetchDashboardData = async () => {
       try {
         const plRes = await fetch(`/api/profit-loss/${storeId}`);
         if (plRes.ok) { setPlData(await plRes.json()); }
@@ -271,12 +272,23 @@ export default function VendorDashboard() {
 
         const chartRes = await fetch(`/api/sales-reports/dynamic/${storeId}?range=${salesDuration}`);
         if (chartRes.ok) { setChartData(await chartRes.json()); }
+
+        // Also refresh transactions ledger and inventory stock
+        const txRes = await fetch(`/api/transactions?storeId=${storeId}`);
+        if (txRes.ok) { setTransactionsLedger(await txRes.json()); }
+
+        const invRes = await fetch(`/api/products?storeId=${storeId}`);
+        if (invRes.ok) { setInventory(await invRes.json()); }
       } catch (error) {
-        console.error("Failed to fetch P&L/chart data:", error);
+        console.error("Failed to auto-refresh dashboard data:", error);
       }
     };
-    fetchPLAndChart();
+    fetchDashboardData();
+    // Auto-refresh the entire dashboard every 30 seconds
+    const refreshInterval = setInterval(fetchDashboardData, 30000);
+    return () => clearInterval(refreshInterval);
   }, [storeId, salesDuration]);
+
 
   // Sign out workflow
   const handleSignOut = async () => {

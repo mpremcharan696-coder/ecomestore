@@ -83,19 +83,43 @@ app.post('/api/stores', async (req, res) => {
       );
     }
     
-    // Auto-prepopulate transactions
+    // Auto-prepopulate transactions linked to products (for P&L tracking)
+    // First, fetch the product IDs we just inserted
+    const insertedProducts = await pool.query(
+      "SELECT id, name, price, cost_price FROM products WHERE store_id = $1 ORDER BY id ASC;",
+      [sId]
+    );
+    const prods = insertedProducts.rows;
+
     const prepopTx = [
-      [`TX_8820_${sId}`, "Alice Cooper", 149.99, "Credit Node", "Cleared"],
-      [`TX_5541_${sId}`, "Quantum Devs Ltd", 890.00, "Direct Bank", "Cleared"],
-      [`TX_1092_${sId}`, "Bob Vance", 24.50, "Merchant Pay", "Cleared"]
+      [`TX_8820_${sId}`, "Alice Cooper", "Credit Node", "Cleared", prods[0]?.id, 1],  // 1x Quantum Processor
+      [`TX_5541_${sId}`, "Quantum Devs Ltd", "Direct Bank", "Cleared", prods[2]?.id, 10], // 10x Torus Rings
+      [`TX_1092_${sId}`, "Bob Vance", "Merchant Pay", "Cleared", prods[1]?.id, 1]      // 1x Aetheric Flux
     ];
     for (const tx of prepopTx) {
+      const prodId = tx[4];
+      const qty = tx[5];
+      const linkedProd = prods.find(p => p.id === prodId);
+      const unitPrice = linkedProd ? parseFloat(linkedProd.price) : 0;
+      const costPrice = linkedProd ? parseFloat(linkedProd.cost_price || 0) : 0;
+      const txAmount = unitPrice * qty;
+
       await pool.query(
-        "INSERT INTO transactions (transaction_id, store_id, client_name, amount, method, status) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING;",
-        [tx[0], sId, tx[1], tx[2], tx[3], tx[4]]
+        "INSERT INTO transactions (transaction_id, store_id, client_name, amount, method, status, product_id, quantity) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING;",
+        [tx[0], sId, tx[1], txAmount, tx[2], tx[3], prodId, qty]
       );
+
+      // Insert P&L tracking entry for this seeded transaction
+      if (linkedProd) {
+        const netMargin = unitPrice > 0 ? ((unitPrice - costPrice) / unitPrice) * 100 : 0;
+        await pool.query(
+          "INSERT INTO profit_loss_tracking (transaction_id, cost_price_per_unit, selling_price_per_unit, net_profit_margin, total_expense, total_revenue) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING;",
+          [tx[0], costPrice, unitPrice, netMargin, costPrice * qty, txAmount]
+        );
+      }
     }
     console.log(`✓ Prepopulated multi-tenant default inventory and ledger for store ID ${sId}.`);
+
 
     return res.status(201).json({
       success: true,
@@ -1775,6 +1799,81 @@ ${storeContext}`;
   } catch (error) {
     console.error("❌ /api/chat error:", error.message);
     return res.status(500).json({ error: error.message || "Failed to process AI chat request." });
+  }
+});
+/**
+ * POST /api/ecom/checkout
+ * Processes a bulk e-commerce checkout.
+ * Deducts stock, creates transaction entries, and tracks P&L.
+ */
+app.post('/api/ecom/checkout', async (req, res) => {
+  const { storeId, buyerName, method, cart } = req.body;
+  
+  if (!storeId || !buyerName || !cart || !Array.isArray(cart) || cart.length === 0) {
+    return res.status(400).json({ error: "Invalid checkout payload." });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const txId = `TX_ECOM_${Date.now()}_${storeId}`;
+    let totalCheckoutAmount = 0;
+    
+    for (const item of cart) {
+      const { productId, quantity } = item;
+      
+      if (!productId || !quantity || quantity <= 0) {
+        throw new Error("Invalid cart item details.");
+      }
+
+      const prodRes = await client.query(
+        `SELECT price, cost_price, current_stock_level, name FROM products WHERE id = $1 AND store_id = $2`,
+        [productId, storeId]
+      );
+      
+      if (prodRes.rows.length === 0) {
+        throw new Error(`Product ID ${productId} not found for this store.`);
+      }
+
+      const product = prodRes.rows[0];
+      if (product.current_stock_level < quantity) {
+        throw new Error(`Insufficient stock for ${product.name}. Only ${product.current_stock_level} left.`);
+      }
+
+      const unitPrice = parseFloat(product.price);
+      const costPrice = parseFloat(product.cost_price || 0);
+      const itemTotal = unitPrice * quantity;
+      totalCheckoutAmount += itemTotal;
+
+      await client.query(
+        `UPDATE products SET current_stock_level = current_stock_level - $1 WHERE id = $2`,
+        [quantity, productId]
+      );
+
+      const itemTxId = `${txId}_${productId}`;
+      await client.query(
+        `INSERT INTO transactions (transaction_id, store_id, product_id, quantity, client_name, amount, method, status, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+        [itemTxId, storeId, productId, quantity, buyerName, itemTotal, method || 'Razorpay', 'COMPLETED']
+      );
+
+      const netMargin = ((unitPrice - costPrice) / unitPrice) * 100;
+      await client.query(
+        `INSERT INTO profit_loss_tracking (transaction_id, cost_price_per_unit, selling_price_per_unit, net_profit_margin, total_expense, total_revenue)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [itemTxId, costPrice, unitPrice, isNaN(netMargin) ? 0 : netMargin, costPrice * quantity, itemTotal]
+      );
+    }
+
+    await client.query('COMMIT');
+    res.json({ success: true, message: "Checkout completed successfully.", transaction_id: txId, total_amount: totalCheckoutAmount });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error("❌ Ecom Checkout Error:", error.message);
+    res.status(400).json({ error: error.message });
+  } finally {
+    client.release();
   }
 });
 
