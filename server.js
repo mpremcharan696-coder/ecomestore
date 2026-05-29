@@ -1877,7 +1877,12 @@ app.post('/api/ecom/checkout', async (req, res) => {
   }
 });
 
-// Start Express server listening loop
-app.listen(PORT, () => {
-  console.log(`🚀 Secure Express server running at http://localhost:${PORT}`);
-});
+// Only start listening when running locally (not on Vercel serverless)
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Secure Express server running at http://localhost:${PORT}`);
+  });
+}
+
+// Export app for Vercel serverless functions
+export default app;
