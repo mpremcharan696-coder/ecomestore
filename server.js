@@ -59,12 +59,12 @@ app.post('/api/stores', async (req, res) => {
 
   const query = `
     INSERT INTO stores (store_name)
-    VALUES ($1)
+    VALUES (₹1)
     RETURNING store_id, store_name, created_at;
   `;
 
   try {
-    // Query execution is parameterized ($1) to completely eliminate SQL injection vectors
+    // Query execution is parameterized (₹1) to completely eliminate SQL injection vectors
     const result = await pool.query(query, [trimmedName]);
     const sId = result.rows[0].store_id;
     console.log(`✓ Registered new store: "${trimmedName}" (ID: ${sId})`);
@@ -78,7 +78,7 @@ app.post('/api/stores', async (req, res) => {
     ];
     for (const prod of prepopProducts) {
       await pool.query(
-        "INSERT INTO products (store_id, name, price, current_stock_level, minimum_stock_threshold, category, description, images, photos, cost_price) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT DO NOTHING;",
+        "INSERT INTO products (store_id, name, price, current_stock_level, minimum_stock_threshold, category, description, images, photos, cost_price) VALUES (₹1, ₹2, ₹3, ₹4, ₹5, ₹6, ₹7, ₹8, ₹9, ₹10) ON CONFLICT DO NOTHING;",
         [sId, prod[0], prod[1], prod[2], 5, prod[3], prod[4], prod[5], prod[6], prod[7]]
       );
     }
@@ -86,7 +86,7 @@ app.post('/api/stores', async (req, res) => {
     // Auto-prepopulate transactions linked to products (for P&L tracking)
     // First, fetch the product IDs we just inserted
     const insertedProducts = await pool.query(
-      "SELECT id, name, price, cost_price FROM products WHERE store_id = $1 ORDER BY id ASC;",
+      "SELECT id, name, price, cost_price FROM products WHERE store_id = ₹1 ORDER BY id ASC;",
       [sId]
     );
     const prods = insertedProducts.rows;
@@ -105,7 +105,7 @@ app.post('/api/stores', async (req, res) => {
       const txAmount = unitPrice * qty;
 
       await pool.query(
-        "INSERT INTO transactions (transaction_id, store_id, client_name, amount, method, status, product_id, quantity) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING;",
+        "INSERT INTO transactions (transaction_id, store_id, client_name, amount, method, status, product_id, quantity) VALUES (₹1, ₹2, ₹3, ₹4, ₹5, ₹6, ₹7, ₹8) ON CONFLICT DO NOTHING;",
         [tx[0], sId, tx[1], txAmount, tx[2], tx[3], prodId, qty]
       );
 
@@ -113,7 +113,7 @@ app.post('/api/stores', async (req, res) => {
       if (linkedProd) {
         const netMargin = unitPrice > 0 ? ((unitPrice - costPrice) / unitPrice) * 100 : 0;
         await pool.query(
-          "INSERT INTO profit_loss_tracking (transaction_id, cost_price_per_unit, selling_price_per_unit, net_profit_margin, total_expense, total_revenue) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING;",
+          "INSERT INTO profit_loss_tracking (transaction_id, cost_price_per_unit, selling_price_per_unit, net_profit_margin, total_expense, total_revenue) VALUES (₹1, ₹2, ₹3, ₹4, ₹5, ₹6) ON CONFLICT DO NOTHING;",
           [tx[0], costPrice, unitPrice, netMargin, costPrice * qty, txAmount]
         );
       }
@@ -162,7 +162,7 @@ app.get('/api/stores/search', async (req, res) => {
   }
 
   try {
-    const query = "SELECT * FROM stores WHERE store_name = $1 LIMIT 1;";
+    const query = "SELECT * FROM stores WHERE store_name = ₹1 LIMIT 1;";
     const result = await pool.query(query, [name.trim()]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Store not found." });
@@ -195,7 +195,7 @@ app.get('/api/products', async (req, res) => {
         pt.high_margin_operator_flag
       FROM products p
       LEFT JOIN product_trends pt ON p.id = pt.product_id
-      WHERE p.store_id = $1 
+      WHERE p.store_id = ₹1 
       ORDER BY p.id ASC;
     `, [parseInt(storeId)]);
 
@@ -300,7 +300,7 @@ app.post('/api/products', async (req, res) => {
 
   const query = `
     INSERT INTO products (store_id, name, price, current_stock_level, minimum_stock_threshold, category, description, images, photos, cost_price)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    VALUES (₹1, ₹2, ₹3, ₹4, ₹5, ₹6, ₹7, ₹8, ₹9, ₹10)
     RETURNING id, store_id, name, price, current_stock_level, minimum_stock_threshold, category, description, images, photos, last_updated_timestamp, cost_price;
   `;
 
@@ -326,7 +326,7 @@ app.post('/api/products', async (req, res) => {
     try {
       await pool.query(`
         INSERT INTO product_trends (product_id, product_sales_velocity, times_demanded_count, trending_rank, peak_sales_season, high_margin_operator_flag)
-        VALUES ($1, 0.00, 0, 10, 'All-Season', FALSE)
+        VALUES (₹1, 0.00, 0, 10, 'All-Season', FALSE)
         ON CONFLICT DO NOTHING;
       `, [pId]);
     } catch(e) { console.warn('⚠ product_trends insert skipped:', e.message); }
@@ -383,9 +383,9 @@ app.put('/api/products/:id/stock', async (req, res) => {
 
   const query = `
     UPDATE products
-    SET current_stock_level = GREATEST(0, current_stock_level + $1),
+    SET current_stock_level = GREATEST(0, current_stock_level + ₹1),
         last_updated_timestamp = CURRENT_TIMESTAMP
-    WHERE id = $2
+    WHERE id = ₹2
     RETURNING id, name, price, current_stock_level, minimum_stock_threshold, category, description, images, photos, last_updated_timestamp, cost_price;
   `;
 
@@ -441,7 +441,7 @@ app.get('/api/transactions', async (req, res) => {
       FROM transactions t
       LEFT JOIN products p ON t.product_id = p.id
       LEFT JOIN profit_loss_tracking plt ON t.transaction_id = plt.transaction_id
-      WHERE t.store_id = $1 
+      WHERE t.store_id = ₹1 
       ORDER BY t.created_at DESC;
     `, [parseInt(storeId)]);
 
@@ -486,7 +486,7 @@ app.get('/api/sales-reports', async (req, res) => {
 
   try {
     const result = await pool.query(
-      "SELECT * FROM sales_reports WHERE store_id = $1 ORDER BY report_id ASC;",
+      "SELECT * FROM sales_reports WHERE store_id = ₹1 ORDER BY report_id ASC;",
       [parseInt(storeId)]
     );
 
@@ -527,7 +527,7 @@ app.get('/api/invoices', async (req, res) => {
 
   try {
     const result = await pool.query(
-      "SELECT * FROM invoices WHERE store_id = $1 ORDER BY invoice_id DESC;",
+      "SELECT * FROM invoices WHERE store_id = ₹1 ORDER BY invoice_id DESC;",
       [parseInt(storeId)]
     );
 
@@ -583,7 +583,7 @@ app.post('/api/invoices', async (req, res) => {
 
   const query = `
     INSERT INTO invoices (store_id, tax_amount, discount_applied, final_payable_amount, ai_verification_status, ai_error_logs)
-    VALUES ($1, $2, $3, $4, $5, $6)
+    VALUES (₹1, ₹2, ₹3, ₹4, ₹5, ₹6)
     RETURNING *;
   `;
 
@@ -636,7 +636,7 @@ app.get('/api/distributor-orders', async (req, res) => {
       SELECT dist_o.*, d.distributor_name, d.contact_email 
       FROM distributor_orders dist_o
       JOIN distributors d ON dist_o.distributor_id = d.distributor_id
-      WHERE dist_o.store_id = $1 
+      WHERE dist_o.store_id = ₹1 
       ORDER BY dist_o.order_date DESC;
     `, [parseInt(storeId)]);
 
@@ -710,7 +710,7 @@ app.post('/api/distributor-orders', async (req, res) => {
   try {
     // Auto-resolve supplier name to distributor_id if needed
     if (!finalDistId && supplier) {
-      const distRes = await pool.query("SELECT distributor_id FROM distributors WHERE distributor_name ILIKE $1 LIMIT 1;", [supplier.trim()]);
+      const distRes = await pool.query("SELECT distributor_id FROM distributors WHERE distributor_name ILIKE ₹1 LIMIT 1;", [supplier.trim()]);
       if (distRes.rows.length > 0) {
         finalDistId = distRes.rows[0].distributor_id;
       }
@@ -737,7 +737,7 @@ app.post('/api/distributor-orders', async (req, res) => {
 
     const query = `
       INSERT INTO distributor_orders (store_id, distributor_id, ordered_items_list, order_status, total_cost)
-      VALUES ($1, $2, $3, $4, $5)
+      VALUES (₹1, ₹2, ₹3, ₹4, ₹5)
       RETURNING *;
     `;
 
@@ -750,7 +750,7 @@ app.post('/api/distributor-orders', async (req, res) => {
     ]);
 
     // Fetch distributor name to return fully hydrated response
-    const distNameRes = await pool.query("SELECT distributor_name FROM distributors WHERE distributor_id = $1;", [finalDistId]);
+    const distNameRes = await pool.query("SELECT distributor_name FROM distributors WHERE distributor_id = ₹1;", [finalDistId]);
     const distName = distNameRes.rows[0]?.distributor_name || "Apex Logistics";
 
     const row = result.rows[0];
@@ -799,7 +799,7 @@ app.get('/api/notifications', async (req, res) => {
     
     // 1. Dynamic Check: Scan inventory for products below minimum stock threshold
     const lowStockProducts = await pool.query(
-      "SELECT product_id, product_name, current_stock_level, minimum_stock_threshold FROM products WHERE store_id = $1 AND current_stock_level <= minimum_stock_threshold;",
+      "SELECT product_id, product_name, current_stock_level, minimum_stock_threshold FROM products WHERE store_id = ₹1 AND current_stock_level <= minimum_stock_threshold;",
       [sId]
     );
 
@@ -809,7 +809,7 @@ app.get('/api/notifications', async (req, res) => {
       
       // Check if an unread notification already exists for this product
       const existing = await pool.query(
-        "SELECT notification_id FROM ai_restocking_notifications WHERE vendor_id = $1 AND product_id = $2 AND is_read = FALSE LIMIT 1;",
+        "SELECT notification_id FROM ai_restocking_notifications WHERE vendor_id = ₹1 AND product_id = ₹2 AND is_read = FALSE LIMIT 1;",
         [sId, pId]
       );
 
@@ -818,7 +818,7 @@ app.get('/api/notifications', async (req, res) => {
         predictedDate.setDate(predictedDate.getDate() + 3); // Predicted restock is 3 days out
         
         await pool.query(
-          "INSERT INTO ai_restocking_notifications (vendor_id, alert_type, product_id, ai_predicted_restock_date, is_read) VALUES ($1, $2, $3, $4, FALSE);",
+          "INSERT INTO ai_restocking_notifications (vendor_id, alert_type, product_id, ai_predicted_restock_date, is_read) VALUES (₹1, ₹2, ₹3, ₹4, FALSE);",
           [sId, alertType, pId, predictedDate]
         );
       }
@@ -829,7 +829,7 @@ app.get('/api/notifications', async (req, res) => {
       SELECT n.*, p.product_name, p.current_stock_level, p.category
       FROM ai_restocking_notifications n
       JOIN products p ON n.product_id = p.product_id
-      WHERE n.vendor_id = $1
+      WHERE n.vendor_id = ₹1
       ORDER BY n.notification_id DESC;
     `, [sId]);
 
@@ -867,7 +867,7 @@ app.post('/api/notifications/:id/read', async (req, res) => {
   
   try {
     const result = await pool.query(
-      "UPDATE ai_restocking_notifications SET is_read = TRUE WHERE notification_id = $1 RETURNING *;",
+      "UPDATE ai_restocking_notifications SET is_read = TRUE WHERE notification_id = ₹1 RETURNING *;",
       [parseInt(id)]
     );
 
@@ -896,7 +896,7 @@ app.get('/api/telegram-customers', async (req, res) => {
   }
   try {
     const result = await pool.query(
-      "SELECT * FROM telegram_customers WHERE store_id = $1 ORDER BY customer_id ASC;",
+      "SELECT * FROM telegram_customers WHERE store_id = ₹1 ORDER BY customer_id ASC;",
       [parseInt(storeId)]
     );
     return res.json(result.rows);
@@ -924,8 +924,8 @@ app.post('/api/telegram-customers/message', async (req, res) => {
     const result = await pool.query(`
       UPDATE telegram_customers
       SET last_message_sent_timestamp = CURRENT_TIMESTAMP,
-          message_delivery_status = $1
-      WHERE store_id = $2 AND customer_id = $3
+          message_delivery_status = ₹1
+      WHERE store_id = ₹2 AND customer_id = ₹3
       RETURNING *;
     `, [deliveryStatus, parseInt(storeId), parseInt(customerId)]);
 
@@ -956,7 +956,7 @@ app.get('/api/deliveries', async (req, res) => {
       SELECT pd.*, dist_o.ordered_items_list, dist_o.order_status, dist_o.total_cost
       FROM product_deliveries pd
       JOIN distributor_orders dist_o ON pd.distributor_order_id = dist_o.distributor_order_id
-      WHERE pd.store_id = $1
+      WHERE pd.store_id = ₹1
       ORDER BY pd.delivery_id DESC;
     `, [parseInt(storeId)]);
     return res.json(result.rows);
@@ -976,8 +976,8 @@ app.put('/api/deliveries/:id/gps', async (req, res) => {
   try {
     const result = await pool.query(`
       UPDATE product_deliveries
-      SET current_gps_coordinates = $1
-      WHERE delivery_id = $2
+      SET current_gps_coordinates = ₹1
+      WHERE delivery_id = ₹2
       RETURNING *;
     `, [coordinates.trim(), parseInt(id)]);
 
@@ -1005,7 +1005,7 @@ app.get('/api/payment-transactions', async (req, res) => {
   }
   try {
     const result = await pool.query(
-      "SELECT * FROM payment_transactions WHERE store_id = $1 ORDER BY created_at DESC;",
+      "SELECT * FROM payment_transactions WHERE store_id = ₹1 ORDER BY created_at DESC;",
       [parseInt(storeId)]
     );
     return res.json(result.rows);
@@ -1025,7 +1025,7 @@ app.post('/api/payment-transactions', async (req, res) => {
     const randomId = 'TX_GATEWAY_' + Math.random().toString(36).substring(2, 10).toUpperCase();
     const result = await pool.query(`
       INSERT INTO payment_transactions (payment_gateway_transaction_id, store_id, payment_method, payment_status, gateway_response_payload, amount)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      VALUES (₹1, ₹2, ₹3, ₹4, ₹5, ₹6)
       RETURNING *;
     `, [randomId, parseInt(storeId), method, status, JSON.stringify(payload), parseFloat(amount)]);
     return res.status(201).json(result.rows[0]);
@@ -1049,7 +1049,7 @@ app.get('/api/telegram-communities', async (req, res) => {
   }
   try {
     const result = await pool.query(
-      "SELECT * FROM telegram_vendor_communities WHERE store_id = $1 ORDER BY join_date ASC;",
+      "SELECT * FROM telegram_vendor_communities WHERE store_id = ₹1 ORDER BY join_date ASC;",
       [parseInt(storeId)]
     );
     return res.json(result.rows);
@@ -1068,7 +1068,7 @@ app.post('/api/telegram-communities/join', async (req, res) => {
   try {
     const result = await pool.query(`
       INSERT INTO telegram_vendor_communities (vendor_telegram_id, store_id, community_group_id, community_role, join_date, community_ban_status)
-      VALUES ($1, $2, $3, $4, CURRENT_DATE, FALSE)
+      VALUES (₹1, ₹2, ₹3, ₹4, CURRENT_DATE, FALSE)
       RETURNING *;
     `, [telegramId.trim(), parseInt(storeId), groupId.trim(), role]);
     return res.status(201).json(result.rows[0]);
@@ -1093,19 +1093,19 @@ app.put('/api/telegram-communities/role', async (req, res) => {
     let count = 1;
 
     if (role !== undefined) {
-      query += `community_role = $${count}, `;
+      query += `community_role = ₹${count}, `;
       params.push(role);
       count++;
     }
     if (banStatus !== undefined) {
-      query += `community_ban_status = $${count}, `;
+      query += `community_ban_status = ₹${count}, `;
       params.push(!!banStatus);
       count++;
     }
 
     // Strip trailing comma
-    query = query.trim().replace(/,$/, "");
-    query += ` WHERE store_id = $${count} AND vendor_telegram_id = $${count+1} RETURNING *;`;
+    query = query.trim().replace(/,₹/, "");
+    query += ` WHERE store_id = ₹${count} AND vendor_telegram_id = ₹${count+1} RETURNING *;`;
     params.push(parseInt(storeId), telegramId);
 
     const result = await pool.query(query, params);
@@ -1133,7 +1133,7 @@ app.get('/api/chatbot-sessions', async (req, res) => {
   }
   try {
     const result = await pool.query(
-      "SELECT * FROM chatbot_sessions WHERE store_id = $1 ORDER BY session_id DESC LIMIT 30;",
+      "SELECT * FROM chatbot_sessions WHERE store_id = ₹1 ORDER BY session_id DESC LIMIT 30;",
       [parseInt(storeId)]
     );
     return res.json(result.rows);
@@ -1161,7 +1161,7 @@ app.post('/api/chatbot-sessions', async (req, res) => {
 
     const result = await pool.query(`
       INSERT INTO chatbot_sessions (store_id, user_query_text, ai_response_text, intent_classification, user_satisfaction_rating)
-      VALUES ($1, $2, $3, $4, 5)
+      VALUES (₹1, ₹2, ₹3, ₹4, 5)
       RETURNING *;
     `, [parseInt(storeId), queryText.trim(), responseText.trim(), intent]);
     return res.status(201).json(result.rows[0]);
@@ -1181,8 +1181,8 @@ app.put('/api/chatbot-sessions/:id/rate', async (req, res) => {
   try {
     const result = await pool.query(`
       UPDATE chatbot_sessions
-      SET user_satisfaction_rating = $1
-      WHERE session_id = $2
+      SET user_satisfaction_rating = ₹1
+      WHERE session_id = ₹2
       RETURNING *;
     `, [parseInt(rating), parseInt(id)]);
 
@@ -1248,7 +1248,7 @@ app.post('/api/auctions/:id/bid', async (req, res) => {
     const amount = parseFloat(bidAmount);
 
     // Fetch the active auction record
-    const aucRes = await pool.query("SELECT * FROM live_auctions WHERE auction_id = $1;", [parseInt(id)]);
+    const aucRes = await pool.query("SELECT * FROM live_auctions WHERE auction_id = ₹1;", [parseInt(id)]);
     if (aucRes.rows.length === 0) {
       return res.status(404).json({ error: "Auction not found." });
     }
@@ -1265,9 +1265,9 @@ app.post('/api/auctions/:id/bid', async (req, res) => {
     // Update auction highest bid and bidder
     const result = await pool.query(`
       UPDATE live_auctions
-      SET current_highest_bid = $1,
-          highest_bidder_vendor_id = $2
-      WHERE auction_id = $3
+      SET current_highest_bid = ₹1,
+          highest_bidder_vendor_id = ₹2
+      WHERE auction_id = ₹3
       RETURNING *;
     `, [amount, sId, parseInt(id)]);
 
@@ -1292,14 +1292,14 @@ app.put('/api/products/:id', async (req, res) => {
 
   const query = `
     UPDATE products
-    SET name = COALESCE($1, name),
-        price = COALESCE($2, price),
-        cost_price = COALESCE($3, cost_price),
-        current_stock_level = COALESCE($4, current_stock_level),
-        category = COALESCE($5, category),
-        description = COALESCE($6, description),
+    SET name = COALESCE(₹1, name),
+        price = COALESCE(₹2, price),
+        cost_price = COALESCE(₹3, cost_price),
+        current_stock_level = COALESCE(₹4, current_stock_level),
+        category = COALESCE(₹5, category),
+        description = COALESCE(₹6, description),
         last_updated_timestamp = CURRENT_TIMESTAMP
-    WHERE id = $7 AND store_id = $8
+    WHERE id = ₹7 AND store_id = ₹8
     RETURNING id, store_id, name, price, cost_price, current_stock_level, minimum_stock_threshold, category, description, images, photos, last_updated_timestamp;
   `;
 
@@ -1357,7 +1357,7 @@ app.delete('/api/products/:id', async (req, res) => {
 
   try {
     const result = await pool.query(
-      "DELETE FROM products WHERE id = $1 AND store_id = $2 RETURNING id AS product_id;",
+      "DELETE FROM products WHERE id = ₹1 AND store_id = ₹2 RETURNING id AS product_id;",
       [parseInt(id), parseInt(storeId)]
     );
 
@@ -1389,14 +1389,14 @@ app.get('/api/profit-loss/:storeId', async (req, res) => {
         COALESCE(SUM(p.cost_price * t.quantity), 0) AS total_cost
       FROM transactions t
       JOIN products p ON t.product_id = p.id
-      WHERE t.store_id = $1 AND t.product_id IS NOT NULL;
+      WHERE t.store_id = ₹1 AND t.product_id IS NOT NULL;
     `, [sId]);
 
     // Add distributor order costs
     const distResult = await pool.query(`
       SELECT COALESCE(SUM(total_cost), 0) AS distributor_costs
       FROM distributor_orders
-      WHERE store_id = $1;
+      WHERE store_id = ₹1;
     `, [sId]);
 
     const totalRevenue = parseFloat(salesResult.rows[0].total_revenue);
@@ -1436,8 +1436,8 @@ app.get('/api/profit-loss/:storeId/products', async (req, res) => {
         COALESCE(SUM(p.price * t.quantity), 0) AS revenue,
         COALESCE(SUM(p.cost_price * t.quantity), 0) AS cost
       FROM products p
-      LEFT JOIN transactions t ON p.id = t.product_id AND t.store_id = $1
-      WHERE p.store_id = $1
+      LEFT JOIN transactions t ON p.id = t.product_id AND t.store_id = ₹1
+      WHERE p.store_id = ₹1
       GROUP BY p.id, p.name, p.price, p.cost_price
       ORDER BY p.id ASC;
     `, [sId]);
@@ -1505,12 +1505,12 @@ app.get('/api/sales-reports/dynamic/:storeId', async (req, res) => {
 
     const result = await pool.query(`
       SELECT 
-        DATE_TRUNC($1, t.created_at) AS period,
+        DATE_TRUNC(₹1, t.created_at) AS period,
         COALESCE(SUM(t.amount), 0) AS revenue,
         COUNT(t.transaction_id) AS orders
       FROM transactions t
-      WHERE t.store_id = $2 AND t.created_at >= NOW() - $3::INTERVAL
-      GROUP BY DATE_TRUNC($1, t.created_at)
+      WHERE t.store_id = ₹2 AND t.created_at >= NOW() - ₹3::INTERVAL
+      GROUP BY DATE_TRUNC(₹1, t.created_at)
       ORDER BY period ASC;
     `, [dateTrunc, sId, interval]);
 
@@ -1556,7 +1556,7 @@ app.post('/api/transactions/sale', async (req, res) => {
 
     // Look up product to get pricing and stock
     const prodResult = await pool.query(
-      "SELECT id AS product_id, name AS product_name, price AS unit_price, cost_price, current_stock_level FROM products WHERE id = $1 AND store_id = $2;",
+      "SELECT id AS product_id, name AS product_name, price AS unit_price, cost_price, current_stock_level FROM products WHERE id = ₹1 AND store_id = ₹2;",
       [pId, sId]
     );
 
@@ -1575,7 +1575,7 @@ app.post('/api/transactions/sale', async (req, res) => {
 
     // Deduct stock
     await pool.query(
-      "UPDATE products SET current_stock_level = current_stock_level - $1, last_updated_timestamp = CURRENT_TIMESTAMP WHERE id = $2;",
+      "UPDATE products SET current_stock_level = current_stock_level - ₹1, last_updated_timestamp = CURRENT_TIMESTAMP WHERE id = ₹2;",
       [qty, pId]
     );
 
@@ -1589,14 +1589,14 @@ app.post('/api/transactions/sale', async (req, res) => {
     // Insert into transactions
     const txResult = await pool.query(`
       INSERT INTO transactions (transaction_id, store_id, client_name, amount, method, status, product_id, quantity)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES (₹1, ₹2, ₹3, ₹4, ₹5, ₹6, ₹7, ₹8)
       RETURNING *;
     `, [transactionId, sId, clientName.trim(), totalAmount, method.trim(), 'Cleared', pId, qty]);
 
     // Insert into profit_loss_tracking
     await pool.query(`
       INSERT INTO profit_loss_tracking (transaction_id, cost_price_per_unit, selling_price_per_unit, net_profit_margin, total_expense, total_revenue)
-      VALUES ($1, $2, $3, $4, $5, $6);
+      VALUES (₹1, ₹2, ₹3, ₹4, ₹5, ₹6);
     `, [transactionId, costPrice, unitPrice, profitMargin, totalCost, totalAmount]);
 
     const txRow = txResult.rows[0];
@@ -1656,12 +1656,12 @@ app.post('/api/chat', async (req, res) => {
     const [prodResult, txResult, plResult, distResult] = await Promise.all([
       pool.query(
         `SELECT name AS product_name, price AS unit_price, cost_price, current_stock_level, minimum_stock_threshold, category
-         FROM products WHERE store_id = $1 ORDER BY id ASC LIMIT 20;`,
+         FROM products WHERE store_id = ₹1 ORDER BY id ASC LIMIT 20;`,
         [sId]
       ),
       pool.query(
         `SELECT client_name, amount, method, status, created_at
-         FROM transactions WHERE store_id = $1 ORDER BY created_at DESC LIMIT 10;`,
+         FROM transactions WHERE store_id = ₹1 ORDER BY created_at DESC LIMIT 10;`,
         [sId]
       ),
       pool.query(
@@ -1669,12 +1669,12 @@ app.post('/api/chat', async (req, res) => {
                 COALESCE(SUM(p.cost_price * t.quantity), 0) AS total_cost
          FROM transactions t
          JOIN products p ON t.product_id = p.id
-         WHERE t.store_id = $1 AND t.product_id IS NOT NULL;`,
+         WHERE t.store_id = ₹1 AND t.product_id IS NOT NULL;`,
         [sId]
       ),
       pool.query(
         `SELECT ordered_items_list, total_cost, order_status
-         FROM distributor_orders WHERE store_id = $1 ORDER BY distributor_order_id DESC LIMIT 5;`,
+         FROM distributor_orders WHERE store_id = ₹1 ORDER BY distributor_order_id DESC LIMIT 5;`,
         [sId]
       )
     ]);
@@ -1698,7 +1698,7 @@ STORE: "${storeName || 'Unknown'}" (ID: ${sId})
 
 INVENTORY (${products.length} products):
 ${products.map(p =>
-  `- ${p.product_name} | Category: ${p.category} | Price: $${parseFloat(p.unit_price).toFixed(2)} | Cost: $${parseFloat(p.cost_price || 0).toFixed(2)} | Stock: ${p.current_stock_level} (min threshold: ${p.minimum_stock_threshold})`
+  `- ${p.product_name} | Category: ${p.category} | Price: ₹${parseFloat(p.unit_price).toFixed(2)} | Cost: ₹${parseFloat(p.cost_price || 0).toFixed(2)} | Stock: ${p.current_stock_level} (min threshold: ${p.minimum_stock_threshold})`
 ).join('\n')}
 
 LOW STOCK ALERTS (${lowStockItems.length}):
@@ -1708,19 +1708,19 @@ OUT OF STOCK (${outOfStockItems.length}):
 ${outOfStockItems.length > 0 ? outOfStockItems.map(p => `- ${p.product_name}`).join('\n') : 'None'}
 
 FINANCIAL SUMMARY:
-- Total Revenue: $${totalRevenue.toFixed(2)}
-- Total Cost: $${totalCost.toFixed(2)}
-- Net Profit: $${netProfit.toFixed(2)}
+- Total Revenue: ₹${totalRevenue.toFixed(2)}
+- Total Cost: ₹${totalCost.toFixed(2)}
+- Net Profit: ₹${netProfit.toFixed(2)}
 - Profit Margin: ${profitMargin}%
 
 RECENT TRANSACTIONS (last 10):
 ${transactions.length > 0 ? transactions.map(t =>
-  `- ${t.client_name} | $${parseFloat(t.amount).toFixed(2)} | ${t.method} | ${t.status} | ${new Date(t.created_at).toLocaleDateString()}`
+  `- ${t.client_name} | ₹${parseFloat(t.amount).toFixed(2)} | ${t.method} | ${t.status} | ${new Date(t.created_at).toLocaleDateString()}`
 ).join('\n') : 'No transactions yet'}
 
 RECENT DISTRIBUTOR ORDERS (last 5):
 ${distOrders.length > 0 ? distOrders.map(d =>
-  `- ${d.item_name} | Qty: ${d.quantity_ordered} | Cost: $${parseFloat(d.total_cost).toFixed(2)} | Status: ${d.order_status}`
+  `- ${d.item_name} | Qty: ${d.quantity_ordered} | Cost: ₹${parseFloat(d.total_cost).toFixed(2)} | Status: ${d.order_status}`
 ).join('\n') : 'No distributor orders yet'}
 `.trim();
 
@@ -1828,7 +1828,7 @@ app.post('/api/ecom/checkout', async (req, res) => {
       }
 
       const prodRes = await client.query(
-        `SELECT price, cost_price, current_stock_level, name FROM products WHERE id = $1 AND store_id = $2`,
+        `SELECT price, cost_price, current_stock_level, name FROM products WHERE id = ₹1 AND store_id = ₹2`,
         [productId, storeId]
       );
       
@@ -1847,21 +1847,21 @@ app.post('/api/ecom/checkout', async (req, res) => {
       totalCheckoutAmount += itemTotal;
 
       await client.query(
-        `UPDATE products SET current_stock_level = current_stock_level - $1 WHERE id = $2`,
+        `UPDATE products SET current_stock_level = current_stock_level - ₹1 WHERE id = ₹2`,
         [quantity, productId]
       );
 
       const itemTxId = `${txId}_${productId}`;
       await client.query(
         `INSERT INTO transactions (transaction_id, store_id, product_id, quantity, client_name, amount, method, status, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+         VALUES (₹1, ₹2, ₹3, ₹4, ₹5, ₹6, ₹7, ₹8, NOW())`,
         [itemTxId, storeId, productId, quantity, buyerName, itemTotal, method || 'Razorpay', 'COMPLETED']
       );
 
       const netMargin = ((unitPrice - costPrice) / unitPrice) * 100;
       await client.query(
         `INSERT INTO profit_loss_tracking (transaction_id, cost_price_per_unit, selling_price_per_unit, net_profit_margin, total_expense, total_revenue)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+         VALUES (₹1, ₹2, ₹3, ₹4, ₹5, ₹6)`,
         [itemTxId, costPrice, unitPrice, isNaN(netMargin) ? 0 : netMargin, costPrice * quantity, itemTotal]
       );
     }

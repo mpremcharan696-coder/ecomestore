@@ -14,7 +14,7 @@ import {
   Minus, 
   Bell, 
   TrendingUp, 
-  DollarSign, 
+  IndianRupee, 
   Truck, 
   ChevronRight,
   Send,
@@ -1085,7 +1085,7 @@ export default function VendorDashboard() {
                         Gross Revenue
                       </p>
                       <p className="text-2xl font-display font-black text-slate-950">
-                        ${calculateTotalSales().toFixed(2)}
+                        ₹{calculateTotalSales().toFixed(2)}
                       </p>
                       <p className="text-[9px] font-semibold text-green-600 mt-2 flex items-center gap-1">
                         <span>↑ +12.4%</span>
@@ -1101,7 +1101,7 @@ export default function VendorDashboard() {
                         Operating Costs
                       </p>
                       <p className="text-2xl font-display font-black text-slate-950">
-                        ${calculateTotalCosts().toFixed(2)}
+                        ₹{calculateTotalCosts().toFixed(2)}
                       </p>
                       <p className="text-[9px] font-semibold text-slate-400 mt-2">
                         Includes distributor orders
@@ -1110,13 +1110,13 @@ export default function VendorDashboard() {
 
                     <div className="bg-cyan-50/30 border border-cyan-100 rounded-2xl p-6 text-left relative overflow-hidden">
                       <div className="absolute top-4 right-4 text-cyan-600">
-                        <DollarSign size={18} />
+                        <IndianRupee size={18} />
                       </div>
                       <p className="text-[10px] text-cyan-600 font-display font-extrabold uppercase tracking-widest mb-1">
                         Net Profit (P&L)
                       </p>
                       <p className="text-2xl font-display font-black text-slate-950">
-                        ${calculateProfit().toFixed(2)}
+                        ₹{calculateProfit().toFixed(2)}
                       </p>
                       <p className="text-[9px] font-semibold text-cyan-700 mt-2">
                         Margin: {plData.profitMargin.toFixed(1)}%
@@ -1139,7 +1139,7 @@ export default function VendorDashboard() {
                             <div key={idx} className={`flex-1 ${isPeak ? 'bg-cyan-500' : 'bg-cyan-100 border-t border-cyan-400'} rounded-t relative group`}
                               style={{ height: `${Math.max(heightPct, 4)}%` }}>
                               <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[8px] font-bold py-0.5 px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                                ${val.toFixed(0)}{isPeak ? ' (Peak)' : ''}
+                                ₹{val.toFixed(0)}{isPeak ? ' (Peak)' : ''}
                               </span>
                             </div>
                           );
@@ -1180,7 +1180,7 @@ export default function VendorDashboard() {
                               <td className="py-4 px-6 text-slate-900">{tx.client}</td>
                               <td className="py-4 px-6 text-slate-600">{tx.product_name || "N/A"}</td>
                               <td className="py-4 px-6 text-[10px] text-slate-500 font-display font-bold uppercase tracking-wider">{tx.method}</td>
-                              <td className="py-4 px-6 text-right text-slate-950">${tx.amount.toFixed(2)}</td>
+                              <td className="py-4 px-6 text-right text-slate-950">₹{tx.amount.toFixed(2)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1200,7 +1200,7 @@ export default function VendorDashboard() {
                           <select value={saleProductId} onChange={e => setSaleProductId(e.target.value)} className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500" required>
                             <option value="">Select product...</option>
                             {inventory.filter(p => p.stock > 0).map(p => (
-                              <option key={p.product_id} value={p.product_id}>{p.name} (${p.price} × {p.stock} avail)</option>
+                              <option key={p.product_id} value={p.product_id}>{p.name} (₹{p.price} × {p.stock} avail)</option>
                             ))}
                           </select>
                         </div>
@@ -1226,7 +1226,7 @@ export default function VendorDashboard() {
                         </div>
                       </div>
                       <button type="submit" disabled={recordingSale} className="w-full py-3 bg-slate-900 text-white font-display font-bold text-xs tracking-wider uppercase rounded-xl transition-all hover:bg-cyan-600 hover:shadow-neonCyan hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2">
-                        <DollarSign size={14} /> {recordingSale ? "Recording..." : "Record Sale Transaction"}
+                        <IndianRupee size={14} /> {recordingSale ? "Recording..." : "Record Sale Transaction"}
                       </button>
                     </form>
                   </div>
@@ -1256,18 +1256,18 @@ export default function VendorDashboard() {
                           {productPL.map(pp => (
                             <tr key={pp.product_id} className="hover:bg-white/40 transition-colors">
                               <td className="py-3 px-4 text-slate-900">{pp.product_name}</td>
-                              <td className="py-3 px-3 text-right text-blue-700">${pp.unit_price?.toFixed(2) || '0.00'}</td>
-                              <td className="py-3 px-3 text-right text-orange-600">${pp.cost_price?.toFixed(2) || '0.00'}</td>
-                              <td className="py-3 px-3 text-right text-emerald-700">${pp.profit_per_unit?.toFixed(2) || '0.00'}</td>
+                              <td className="py-3 px-3 text-right text-blue-700">₹{pp.unit_price?.toFixed(2) || '0.00'}</td>
+                              <td className="py-3 px-3 text-right text-orange-600">₹{pp.cost_price?.toFixed(2) || '0.00'}</td>
+                              <td className="py-3 px-3 text-right text-emerald-700">₹{pp.profit_per_unit?.toFixed(2) || '0.00'}</td>
                               <td className="py-3 px-3 text-right">
                                 <span className={`text-[10px] font-display font-bold px-2 py-0.5 rounded-lg ${(pp.margin_per_unit || 0) >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
                                   {(pp.margin_per_unit || 0).toFixed(1)}%
                                 </span>
                               </td>
                               <td className="py-3 px-3 text-right text-slate-600">{pp.unitsSold}</td>
-                              <td className="py-3 px-3 text-right text-green-700">${pp.revenue.toFixed(2)}</td>
-                              <td className="py-3 px-3 text-right text-rose-600">${pp.cost.toFixed(2)}</td>
-                              <td className="py-3 px-3 text-right text-slate-950">${pp.profit.toFixed(2)}</td>
+                              <td className="py-3 px-3 text-right text-green-700">₹{pp.revenue.toFixed(2)}</td>
+                              <td className="py-3 px-3 text-right text-rose-600">₹{pp.cost.toFixed(2)}</td>
+                              <td className="py-3 px-3 text-right text-slate-950">₹{pp.profit.toFixed(2)}</td>
                               <td className="py-3 px-4 text-right">
                                 <span className={`text-[10px] font-display font-bold px-2 py-0.5 rounded-lg ${pp.profitMargin >= 0 ? 'bg-green-50 text-green-700' : 'bg-rose-50 text-rose-700'}`}>
                                   {pp.profitMargin.toFixed(1)}%
@@ -1320,7 +1320,7 @@ export default function VendorDashboard() {
                       <div className="grid grid-cols-3 gap-6">
                         <div className="flex flex-col gap-2">
                           <label className="text-[10px] font-display font-extrabold tracking-widest text-slate-400 uppercase ml-0.5">
-                            Price ($)
+                            Price (₹)
                           </label>
                           <input 
                             type="number" 
@@ -1349,7 +1349,7 @@ export default function VendorDashboard() {
 
                         <div className="flex flex-col gap-2">
                           <label className="text-[10px] font-display font-extrabold tracking-widest text-slate-400 uppercase ml-0.5">
-                            Cost Price ($)
+                            Cost Price (₹)
                           </label>
                           <input 
                             type="number" 
@@ -1521,7 +1521,7 @@ export default function VendorDashboard() {
                                       {item.stock} units
                                     </span>
                                   </td>
-                                  <td className="py-4 px-6 text-right text-slate-950">${item.price.toFixed(2)}</td>
+                                  <td className="py-4 px-6 text-right text-slate-950">₹{item.price.toFixed(2)}</td>
                                   <td className="py-4 px-6 text-center" onClick={(e) => e.stopPropagation()}>
                                     <div className="flex items-center justify-center gap-1">
                                       <button 
@@ -1591,11 +1591,11 @@ export default function VendorDashboard() {
                                                   </div>
                                                   <div className="bg-white border border-slate-100 rounded-xl p-2 text-center">
                                                     <p className="text-[8px] font-display font-extrabold uppercase tracking-widest text-slate-400">Revenue</p>
-                                                    <p className="text-sm font-display font-black text-green-700">${pp.revenue.toFixed(2)}</p>
+                                                    <p className="text-sm font-display font-black text-green-700">₹{pp.revenue.toFixed(2)}</p>
                                                   </div>
                                                   <div className="bg-white border border-slate-100 rounded-xl p-2 text-center">
                                                     <p className="text-[8px] font-display font-extrabold uppercase tracking-widest text-slate-400">Profit</p>
-                                                    <p className="text-sm font-display font-black text-slate-900">${pp.profit.toFixed(2)}</p>
+                                                    <p className="text-sm font-display font-black text-slate-900">₹{pp.profit.toFixed(2)}</p>
                                                   </div>
                                                   <div className="bg-white border border-slate-100 rounded-xl p-2 text-center">
                                                     <p className="text-[8px] font-display font-extrabold uppercase tracking-widest text-slate-400">Margin</p>
@@ -1684,7 +1684,7 @@ export default function VendorDashboard() {
                             </div>
                             <div>
                               <p className="text-lg font-display font-black text-slate-950">
-                                ${item.price.toFixed(2)}
+                                ₹{item.price.toFixed(2)}
                               </p>
                               <button 
                                 onClick={() => placeDistributorOrder(item)}
@@ -1862,7 +1862,7 @@ export default function VendorDashboard() {
                                       Current High
                                     </p>
                                     <p className="text-sm font-display font-black text-slate-950 font-mono">
-                                      ${auc.current_highest_bid.toFixed(2)}
+                                      ₹{auc.current_highest_bid.toFixed(2)}
                                     </p>
                                   </div>
                                   
@@ -1947,13 +1947,13 @@ export default function VendorDashboard() {
                                       #INV-{inv.invoice_id}
                                     </td>
                                     <td className="py-4 px-6 text-right text-slate-500">
-                                      ${inv.tax_amount.toFixed(2)}
+                                      ₹{inv.tax_amount.toFixed(2)}
                                     </td>
                                     <td className="py-4 px-6 text-right text-slate-500">
-                                      -${inv.discount_applied.toFixed(2)}
+                                      -₹{inv.discount_applied.toFixed(2)}
                                     </td>
                                     <td className="py-4 px-6 text-right text-slate-950 font-display font-black text-sm">
-                                      ${inv.final_payable_amount.toFixed(2)}
+                                      ₹{inv.final_payable_amount.toFixed(2)}
                                     </td>
                                     <td className="py-4 px-6 text-center">
                                       <span className={`px-3 py-1 rounded-full text-[9px] font-display font-extrabold uppercase tracking-wider border ${
@@ -1999,7 +1999,7 @@ export default function VendorDashboard() {
                       <form onSubmit={handleSubmitInvoice} className="flex flex-col gap-4">
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[9px] font-display font-extrabold tracking-widest text-slate-400 uppercase ml-0.5">
-                            Tax Amount ($)
+                            Tax Amount (₹)
                           </label>
                           <input
                             type="number"
@@ -2013,7 +2013,7 @@ export default function VendorDashboard() {
 
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[9px] font-display font-extrabold tracking-widest text-slate-400 uppercase ml-0.5">
-                            Discount Applied ($)
+                            Discount Applied (₹)
                           </label>
                           <input
                             type="number"
@@ -2027,7 +2027,7 @@ export default function VendorDashboard() {
 
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[9px] font-display font-extrabold tracking-widest text-slate-400 uppercase ml-0.5">
-                            Final Payable Amount ($)
+                            Final Payable Amount (₹)
                           </label>
                           <input
                             type="number"
