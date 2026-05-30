@@ -135,16 +135,35 @@ export default function VendorDashboard() {
 
   // Detect Google log-in store configuration triggers
   useEffect(() => {
-    if (currentUser) {
-      const isGoogle = currentUser.providerData?.some(p => p.providerId === "google.com");
-      const isConfigured = localStorage.getItem(`store_configured_${currentUser.uid}`) === "true";
-      
-      if (isGoogle && !isConfigured) {
-        setNeedsStoreSetup(true);
-      } else {
-        setLocalDisplayName(currentUser.displayName || "");
+    const checkStoreStatus = async () => {
+      if (currentUser) {
+        const isGoogle = currentUser.providerData?.some(p => p.providerId === "google.com");
+        const isConfigured = localStorage.getItem(`store_configured_${currentUser.uid}`) === "true";
+        
+        if (currentUser.displayName) {
+          try {
+            const res = await fetch(`/api/stores/search?name=${encodeURIComponent(currentUser.displayName)}`);
+            if (res.ok) {
+              const storeData = await res.json();
+              localStorage.setItem(`store_configured_${currentUser.uid}`, "true");
+              setLocalDisplayName(currentUser.displayName);
+              setStoreId(storeData.store_id);
+              setNeedsStoreSetup(false);
+              return;
+            }
+          } catch (e) {
+            console.error("Error checking store status:", e);
+          }
+        }
+        
+        if (isGoogle && !isConfigured) {
+          setNeedsStoreSetup(true);
+        } else {
+          setLocalDisplayName(currentUser.displayName || "");
+        }
       }
-    }
+    };
+    checkStoreStatus();
   }, [currentUser]);
 
   // Tab switching fade animations
@@ -318,12 +337,26 @@ export default function VendorDashboard() {
         body: JSON.stringify({ storeName: storeNameInput.trim() })
       });
 
+      let resData;
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Failed to register store.");
+        if (res.status === 409) {
+          // If the store name is already registered, retrieve the existing store instead of throwing an error!
+          const searchRes = await fetch(`/api/stores/search?name=${encodeURIComponent(storeNameInput.trim())}`);
+          if (searchRes.ok) {
+            const existingStore = await searchRes.json();
+            resData = { store: existingStore };
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || "Failed to register store.");
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "Failed to register store.");
+        }
+      } else {
+        resData = await res.json();
       }
 
-      const resData = await res.json();
       const { updateProfile } = await import("firebase/auth");
       await updateProfile(currentUser, { displayName: storeNameInput.trim() });
       localStorage.setItem(`store_configured_${currentUser.uid}`, "true");
